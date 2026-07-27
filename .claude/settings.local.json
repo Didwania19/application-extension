@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -sI --max-time 5 https://registry.npmjs.org/pdfjs-dist)",
+      "Bash(mkdir -p src/vendor/pdfjs)",
+      "Bash(curl -sL --max-time 20 https://registry.npmjs.org/pdfjs-dist/latest -o /tmp/pdfjs-meta.json)",
+      "Bash(node -e \"console.log\\(JSON.parse\\(require\\('fs'\\).readFileSync\\('/tmp/pdfjs-meta.json'\\)\\).version\\)\")",
+      "Read(//private/tmp/**)",
+      "Bash(curl -sL --max-time 30 https://registry.npmjs.org/pdfjs-dist/-/pdfjs-dist-6.1.200.tgz -o pdfjs.tgz)",
+      "Bash(tar xzf *)",
+      "Bash(cp /tmp/package/legacy/build/pdf.min.mjs /Users/harshitadidwania/application-extension/src/vendor/pdfjs/)",
+      "Bash(cp /tmp/package/legacy/build/pdf.worker.min.mjs /Users/harshitadidwania/application-extension/src/vendor/pdfjs/)",
+      "Bash(python3 -c \"import reportlab\")",
+      "Bash('/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' --headless --disable-gpu --no-pdf-header-footer --print-to-pdf=/private/tmp/claude-501/-Users-harshitadidwania-application-extension/25ddc0ac-1ec7-4303-9943-73f91735cb22/scratchpad/sample-resume.pdf file:///private/tmp/claude-501/-Users-harshitadidwania-application-extension/25ddc0ac-1ec7-4303-9943-73f91735cb22/scratchpad/sample-resume.html)",
+      "Bash(python3 -c \"import fitz\")",
+      "Bash(python3 -c \"import pdfplumber\")",
+      "Bash(node --input-type=module -e ' *)",
+      "Bash(python3 -c \"import json; json.load\\(open\\('/Users/harshitadidwania/application-extension/manifest.json'\\)\\)\")",
+      "Bash(python3 - '/Users/harshitadidwania/Downloads/Manager, Operations Insights - Yum! Careers.html')",
+      "Bash(node --check src/content/fill-engine.js)",
+      "Bash(node --check src/content/field-map.js)",
+      "Bash(node --check src/lib/storage.js)",
+      "Bash(cd *)",
+      "Bash(node *)"
+    ]
+  }
+}
