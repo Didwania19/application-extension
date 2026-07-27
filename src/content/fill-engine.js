@@ -698,6 +698,24 @@ function resolveDateSubfieldValue(descriptor, profile, rowCursor) {
   return descriptor.unit === "year" ? year : String(Number(month));
 }
 
+// "Job Title" and "Company" are genuinely ambiguous the same way Month/Year
+// are: on a flat form they mean the single top-level work.currentTitle /
+// work.currentCompany fields, but inside a repeated work-experience row
+// (Workday's included) the identical label belongs to that specific entry.
+// Without this, "Job Title" was caught by the earlier, flat currentTitle rule
+// before the row-scoped rule ever ran — every row read the one flat field, so
+// all rows showed the same title while Company (whose flat rule needs the
+// word "name" and so does not also match the bare label) correctly advanced.
+// That mismatch is what looked like "add another" duplicating the job.
+function matchRowContextOverride(el, label) {
+  const t = normText(label);
+  const idish = `${el.id} ${el.name}`;
+  if (!/workExperience|employment/i.test(idish)) return null;
+  if (t === "job title" || t === "title") return "experience.0.title";
+  if (t === "company" || t === "company name" || t === "employer") return "experience.0.company";
+  return null;
+}
+
 function findAddEntryButton(pattern) {
   const candidates = deepQueryAll('button, a, [role="button"], spl-button');
   return candidates.find((b) => pattern.test(b.getAttribute("aria-label") || "") || pattern.test(optionLabel(b)));
@@ -810,7 +828,7 @@ async function fillDocument(doc, profile) {
 
     if (isComboboxInput(el)) {
       const label = getLabelText(doc, el);
-      const matchedPath = matchFieldPath(label);
+      const matchedPath = matchRowContextOverride(el, label) || matchFieldPath(label);
       if (!matchedPath) continue;
       // Row-resolved here too, not only on plain inputs: a repeated row's
       // Company/Title are dropdowns on some forms, and skipping the cursor for
@@ -921,7 +939,7 @@ async function fillDocument(doc, profile) {
       continue;
     }
 
-    const matchedPath = matchFieldPath(label);
+    const matchedPath = matchRowContextOverride(el, label) || matchFieldPath(label);
     if (!matchedPath) continue;
     // Resolved before the skip checks below so the cursor still advances for
     // rows the form already filled in; otherwise later rows shift onto the

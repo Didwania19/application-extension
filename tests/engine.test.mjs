@@ -29,6 +29,7 @@ function loadEngine() {
     "normText",
     "matchDateSubfield",
     "resolveDateSubfieldValue",
+    "matchRowContextOverride",
   ];
   const factory = new Function(`${source}\nreturn {${exposed.join(",")}};`);
   return factory();
@@ -113,6 +114,46 @@ check("second row resolves to the second profile entry",
     "education.1.school", "education.1.degree",
     "identity.email",
   ]);
+
+// --- row-context override for ambiguous labels ----------------------------
+// "Job Title" reads two ways: a flat "what's your current title" question, or
+// the title field of one row in a repeated work-experience section (Workday's
+// included). The label text is identical either way. Seen live: the flat
+// rule for currentTitle matches "job title" as a bare word, so it caught
+// Workday's row label before the row-scoped rule ever ran, and every row read
+// the single flat work.currentTitle value — while Company (whose flat rule
+// requires "company name", not just "company") fell through to its row rule
+// and advanced correctly. That mismatch was reported as "add another"
+// duplicating the job, when only the title half was actually stuck.
+check("this is the trap: 'Job Title' alone matches the FLAT current-title rule",
+  engine.matchFieldPath("Job Title"), "work.currentTitle");
+check("row context overrides it back to the row-scoped path",
+  engine.matchRowContextOverride({ id: "workExperience-24--jobTitle", name: "" }, "Job Title"),
+  "experience.0.title");
+check("a flat form with no row id keeps the old, correct behaviour",
+  engine.matchRowContextOverride({ id: "jobTitle", name: "" }, "Job Title"), null);
+check("bare Company also gets the override, for symmetry with Title",
+  engine.matchRowContextOverride({ id: "workExperience-24--companyName", name: "" }, "Company"),
+  "experience.0.company");
+
+{
+  // End-to-end reproduction of the reported bug, run the same way the real
+  // loop does: resolve the override first, fall back to matchFieldPath, then
+  // resolveRowPath — for three rows in document order.
+  const rows = [
+    { id: "workExperience-5--jobTitle", label: "Job Title" }, { id: "workExperience-5--companyName", label: "Company" },
+    { id: "workExperience-24--jobTitle", label: "Job Title" }, { id: "workExperience-24--companyName", label: "Company" },
+    { id: "workExperience-45--jobTitle", label: "Job Title" }, { id: "workExperience-45--companyName", label: "Company" },
+  ];
+  const rowResolveCursor = {};
+  const resolved = rows.map((f) => {
+    const matched = engine.matchRowContextOverride({ id: f.id, name: "" }, f.label) || engine.matchFieldPath(f.label);
+    return engine.resolveRowPath(matched, rowResolveCursor);
+  });
+  check("three Workday rows: title advances 0,1,2 exactly like company does, not stuck on row 0",
+    resolved,
+    ["experience.0.title", "experience.0.company", "experience.1.title", "experience.1.company", "experience.2.title", "experience.2.company"]);
+}
 
 // --- misc ----------------------------------------------------------------
 check("booleans render as Yes/No, never 'true'", engine.yesNoText(true), "Yes");
