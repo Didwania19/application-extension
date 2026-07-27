@@ -2,14 +2,32 @@ import * as pdfjsLib from "../vendor/pdfjs/pdf.min.mjs";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = chrome.runtime.getURL("src/vendor/pdfjs/pdf.worker.min.mjs");
 
+// A PDF has no spaces — only glyphs at coordinates — so whether two runs are
+// separated is a question about geometry. Appending a space after every run
+// breaks any word whose styling splits it: a small-caps heading emits "H" and
+// "ARSHITA" as separate runs, which naive joining turns into "H ARSHITA".
+const SPACE_GAP_RATIO = 0.2; // of font size; a real space is roughly 0.25em
+
+function separatorBetween(previous, next) {
+  if (previous.hasEOL) return "\n";
+  const fontSize = Math.abs(next.transform[0]) || Math.abs(previous.transform[0]) || 10;
+  if (Math.abs(next.transform[5] - previous.transform[5]) > fontSize * 0.5) return "\n";
+  if (!previous.width) return " "; // no geometry to judge by — keep them apart
+  const gap = next.transform[4] - (previous.transform[4] + previous.width);
+  return gap > fontSize * SPACE_GAP_RATIO ? " " : "";
+}
+
 export async function extractPdfText(arrayBuffer) {
   const doc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
   let text = "";
   for (let pageNum = 1; pageNum <= doc.numPages; pageNum++) {
     const page = await doc.getPage(pageNum);
     const content = await page.getTextContent();
+    let previous = null;
     for (const item of content.items) {
-      text += item.str + (item.hasEOL ? "\n" : " ");
+      if (previous) text += separatorBetween(previous, item);
+      text += item.str;
+      previous = item;
     }
     text += "\n";
   }
@@ -38,13 +56,23 @@ function normalizeUrl(url) {
   return /^https?:\/\//i.test(url) ? url : `https://${url}`;
 }
 
+// Second line of defence for the small-caps split, for PDFs where the runs
+// carry no width to measure. Only applied to an all-caps heading, and only to
+// a lone letter glued onto a following all-caps word ("H ARSHITA" -> "HARSHITA"),
+// so a name written with real initials ("J K Rowling") is left alone.
+function repairSmallCapsHeading(line) {
+  if (!/^[A-Z][A-Z\s.'-]*$/.test(line)) return line;
+  return line.replace(/\b([A-Z]) (?=[A-Z]{2,}\b)/g, "$1");
+}
+
 function guessName(text) {
   const lines = text
     .split("\n")
     .map((l) => l.trim())
     .filter(Boolean);
-  for (const line of lines.slice(0, 5)) {
-    if (EMAIL_RE.test(line) || PHONE_RE.test(line)) continue;
+  for (const rawLine of lines.slice(0, 5)) {
+    if (EMAIL_RE.test(rawLine) || PHONE_RE.test(rawLine)) continue;
+    const line = repairSmallCapsHeading(rawLine);
     const words = line.split(/\s+/);
     if (words.length >= 2 && words.length <= 4 && /^[A-Z][a-zA-Z.'-]*$/.test(words[0])) {
       return line;
