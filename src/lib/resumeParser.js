@@ -6,7 +6,13 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = chrome.runtime.getURL("src/vendor/pdfjs
 // separated is a question about geometry. Appending a space after every run
 // breaks any word whose styling splits it: a small-caps heading emits "H" and
 // "ARSHITA" as separate runs, which naive joining turns into "H ARSHITA".
-const SPACE_GAP_RATIO = 0.2; // of font size; a real space is roughly 0.25em
+// Only runs that are essentially touching get joined. Measured on a real
+// resume, the small-caps split leaves a gap of ~0.1pt at 18pt, while the
+// genuine word space next to it is only a few points — so a generous
+// threshold would swallow the real space and glue the whole name together.
+// Erring towards inserting a space keeps the old behaviour in the ambiguous
+// middle, where a wrong split is recoverable and a wrong join is not.
+const GLUE_GAP_RATIO = 0.1;
 
 function separatorBetween(previous, next) {
   if (previous.hasEOL) return "\n";
@@ -14,7 +20,7 @@ function separatorBetween(previous, next) {
   if (Math.abs(next.transform[5] - previous.transform[5]) > fontSize * 0.5) return "\n";
   if (!previous.width) return " "; // no geometry to judge by — keep them apart
   const gap = next.transform[4] - (previous.transform[4] + previous.width);
-  return gap > fontSize * SPACE_GAP_RATIO ? " " : "";
+  return gap > fontSize * GLUE_GAP_RATIO ? " " : "";
 }
 
 export async function extractPdfText(arrayBuffer) {
