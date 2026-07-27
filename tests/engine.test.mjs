@@ -30,6 +30,9 @@ function loadEngine() {
     "matchDateSubfield",
     "resolveDateSubfieldValue",
     "matchRowContextOverride",
+    "isListboxButton",
+    "getListboxButtonLabel",
+    "listboxButtonHasAnswer",
   ];
   const factory = new Function(`${source}\nreturn {${exposed.join(",")}};`);
   return factory();
@@ -135,6 +138,25 @@ check("a flat form with no row id keeps the old, correct behaviour",
 check("bare Company also gets the override, for symmetry with Title",
   engine.matchRowContextOverride({ id: "workExperience-24--companyName", name: "" }, "Company"),
   "experience.0.company");
+
+// --- Workday's listbox-button questions (distinct from react-select) -------
+// Some Workday tenants render single-select questions as a native
+// <button aria-haspopup="listbox">, not react-select's <input role="combobox">.
+// collectFields only queried input/select/textarea, so these buttons were
+// invisible to the engine — not mismatched, not found at all. Confirmed live
+// on a real VF Corp posting: "Are you authorized to work in the United
+// States?" as one of these buttons, clicking correctly opened it, selected
+// "Yes", and the button's own text updated to "Yes" as the read-back.
+const fakeListboxButton = { tagName: "BUTTON", getAttribute: (k) => (k === "aria-haspopup" ? "listbox" : null) };
+check("a button with aria-haspopup=listbox is recognised", engine.isListboxButton(fakeListboxButton), true);
+check("a plain input is not, even with the same aria attribute",
+  engine.isListboxButton({ tagName: "INPUT", getAttribute: (k) => (k === "aria-haspopup" ? "listbox" : null) }), false);
+check("a button with no aria-haspopup is not a listbox button",
+  engine.isListboxButton({ tagName: "BUTTON", getAttribute: () => null }), false);
+
+check("placeholder text means no answer yet", engine.listboxButtonHasAnswer({ innerText: "Select One" }), false);
+check("a real selection counts as answered", engine.listboxButtonHasAnswer({ innerText: "Yes" }), true);
+check("empty text is not an answer", engine.listboxButtonHasAnswer({ innerText: "" }), false);
 
 {
   // End-to-end reproduction of the reported bug, run the same way the real

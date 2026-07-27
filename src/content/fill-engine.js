@@ -19,9 +19,13 @@ function rootOf(el) {
 
 // Collects fields across the document and every open shadow root, in document
 // order per root. Closed shadow roots stay invisible to any extension.
+// Workday renders some single-select questions as a native
+// <button aria-haspopup="listbox">, not react-select's <input role="combobox">
+// — a plain input/select/textarea query misses these entirely, which is why
+// they looked completely unfillable rather than mismatched.
 function collectFields(root, out = [], depth = 0) {
   if (depth > 12) return out;
-  out.push(...root.querySelectorAll("input, select, textarea"));
+  out.push(...root.querySelectorAll('input, select, textarea, button[aria-haspopup="listbox"]'));
   for (const el of root.querySelectorAll("*")) {
     if (el.shadowRoot) collectFields(el.shadowRoot, out, depth + 1);
   }
@@ -267,6 +271,56 @@ function isComboboxInput(el) {
   return el.tagName === "INPUT" && el.getAttribute("role") === "combobox";
 }
 
+// Workday's <button aria-haspopup="listbox"> pattern. Distinct from
+// isComboboxInput above — same idea (open a listbox, click an option), but a
+// real button rather than react-select's text input, and its own visible
+// text is the selected value rather than a separate node.
+function isListboxButton(el) {
+  return el.tagName === "BUTTON" && el.getAttribute("aria-haspopup") === "listbox";
+}
+
+// The button's own aria-label is often just boilerplate ("Select One
+// Required"), not the question — that lives in the enclosing fieldset's
+// <legend>, the same place a plain radio group's label lives (see
+// getRadioGroupLabel). Checked first so the boilerplate never wins.
+function getListboxButtonLabel(doc, btn) {
+  const fieldset = btn.closest("fieldset");
+  if (fieldset) {
+    const legend = fieldset.querySelector("legend");
+    if (legend && legend.innerText.trim()) return legend.innerText;
+  }
+  return getLabelText(doc, btn);
+}
+
+const LISTBOX_PLACEHOLDER_RE = /^select one$|^select\.\.\.$|^please select$|^choose one$/i;
+
+function listboxButtonHasAnswer(btn) {
+  const text = btn.innerText.trim();
+  return Boolean(text) && !LISTBOX_PLACEHOLDER_RE.test(text);
+}
+
+// There is no hidden input or "single value" node to read back the way
+// react-select needs (readComboboxSelection) — the button's own visible text
+// carries the selection, so verification is just comparing that text against
+// the value asked for. openCombobox/closeCombobox/getComboboxOptions and
+// waitForMatchingOption are reused as-is: they work generically off
+// aria-expanded/aria-controls and never assumed an <input> specifically.
+async function fillListboxButton(doc, btn, rawValue) {
+  const value = yesNoText(rawValue);
+  const candidates = valueCandidates(value);
+  openCombobox(btn);
+  const { match } = await waitForMatchingOption(doc, btn, candidates, 400);
+  if (!match) {
+    closeCombobox(btn);
+    return "no-match";
+  }
+  clickOption(match);
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  const landed = btn.innerText.trim();
+  closeCombobox(btn);
+  return candidates.some((c) => optionMatches(landed, c)) ? "filled" : "not-applied";
+}
+
 // Combobox widgets render extra bare inputs alongside the real one (react-select
 // adds an unlabelled dummy input). Those have no label of their own, so the
 // ancestor label-walk in getLabelText attributes the whole question to them and
@@ -298,6 +352,16 @@ function isForeignWidgetInput(doc, el) {
     if (node.querySelector('[role="combobox"]')) return true;
     node = node.parentElement;
   }
+  // Workday's listbox-button (isListboxButton) pairs each question with an
+  // invisible plain <input type="text"> in the same fieldset that stores the
+  // chosen option's internal GUID. Not excluded by type — it is not
+  // type="hidden" — so it must be excluded by proximity, the same as a
+  // react-select combobox's own bare companion input above. Currently always
+  // skipped anyway since it already holds a value once answered, but a blank
+  // one would otherwise get a raw label like "Yes" typed into a field that
+  // expects an internal id, not real user input.
+  const fieldset = el.closest("fieldset");
+  if (fieldset && fieldset.querySelector('button[aria-haspopup="listbox"]')) return true;
   return false;
 }
 
@@ -821,6 +885,37 @@ async function fillDocument(doc, profile) {
     const el = fields[index];
     if (el.disabled) continue;
     if (education.handled.has(el)) continue; // owned by the education pass above
+
+    if (isListboxButton(el)) {
+      // Checked ahead of the SKIP_INPUT_TYPES filter below: a native button's
+      // own .type is literally "button", which that filter exists to exclude.
+      const label = getListboxButtonLabel(doc, el);
+      const matchedPath = matchRowContextOverride(el, label) || matchFieldPath(label);
+      if (!matchedPath) continue;
+      // Resolved before the already-answered check, same reason as elsewhere:
+      // the cursor still has to advance past a row the form already answered.
+      const path = resolveRowPath(matchedPath, rowCursor);
+      if (listboxButtonHasAnswer(el)) {
+        record(label, path, "skipped", "already answered");
+        continue;
+      }
+      const value = getPathValue(profile, path);
+      if (!value) {
+        record(label, path, "skipped", "no data in profile");
+        continue;
+      }
+      const outcome = await fillListboxButton(doc, el, value);
+      if (outcome === "filled") {
+        filledCount++;
+        record(label, path, "filled", value);
+      } else if (outcome === "not-applied") {
+        record(label, path, "failed", `page rejected the selection "${value}" — pick it by hand`);
+      } else {
+        record(label, path, "failed", `no dropdown option matched "${value}"`);
+      }
+      continue;
+    }
+
     if (el.readOnly && !isComboboxInput(el)) continue; // comboboxes are click-only by design
     const type = (el.type || "").toLowerCase();
     if (SKIP_INPUT_TYPES.has(type)) continue;
