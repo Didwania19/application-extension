@@ -37,7 +37,10 @@
       "Bash(python3 -c \"import pypdf; print\\('pypdf already present', pypdf.__version__\\)\")",
       "Bash(pip3 install *)",
       "Bash(python3 -c \"import pypdf; print\\('pypdf ready', pypdf.__version__\\)\")",
-      "Bash(gh pr create --base master --head end-to-end --title 'Fix Workday work-experience row and add date sub-field mapping' --body ' *)"
+      "Bash(gh pr create --base master --head end-to-end --title 'Fix Workday work-experience row and add date sub-field mapping' --body ' *)",
+      "Bash(grep -oE '<button[^>]*>[^<]{0,40}' '/Users/harshitadidwania/Downloads/Lead Analyst, Deal Desk \\(Irvine, CA\\) Johnson and Johnson Medtech, Electrophysiology.html')",
+      "Bash(grep -n \"matchDateSubfield\\\\\",$\" tests/engine.test.mjs)",
+      "Bash(gh pr create --base master --head fix-workday --title 'Fix Job Title getting stuck across Workday work-experience rows' --body ' *)"
     ]
   }
 }
