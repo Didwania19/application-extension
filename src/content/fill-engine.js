@@ -644,6 +644,60 @@ function resolveRowPath(path, cursor) {
   return `${section}.${state.index}.${key}`;
 }
 
+// Some ATS date-range widgets (Workday's included) give both halves of the
+// range the identical accessible label "Month" or "Year" — the only thing
+// that says which half a given input is is its own id or name. Only handled
+// when that id/name explicitly says "start" or "end" and names the section
+// ("experience"/"workExperience" or "education"), so an unrelated date field
+// with no such marker — a birthdate, say — is left alone exactly as before.
+function dateSubfieldRole(el) {
+  const idish = `${el.id} ${el.name}`.toLowerCase();
+  if (/start/.test(idish)) return "start";
+  if (/end/.test(idish)) return "end";
+  return null;
+}
+
+function dateSubfieldSection(el) {
+  const idish = `${el.id} ${el.name}`.toLowerCase();
+  if (/experience|employment/.test(idish)) return "experience";
+  if (/education|school/.test(idish)) return "education";
+  return null;
+}
+
+function matchDateSubfield(el, label) {
+  const unit = normText(label);
+  if (unit !== "month" && unit !== "year") return null;
+  const role = dateSubfieldRole(el);
+  const section = dateSubfieldSection(el);
+  if (!role || !section) return null;
+  return { section, role, unit };
+}
+
+// Reads which profile entry the row cursor is currently on without advancing
+// it — "__date__" is never an identifying key for either section (see
+// ROW_IDENTIFYING_KEYS), so this call cannot itself move the cursor forward.
+// Safe to call any number of times for the month and year halves of the same
+// row, and for both the start and end pair.
+function currentRowIndex(section, rowCursor) {
+  const probe = resolveRowPath(`${section}.0.__date__`, rowCursor);
+  return Number(probe.split(".")[1]);
+}
+
+function resolveDateSubfieldValue(descriptor, profile, rowCursor) {
+  const entry = (profile[descriptor.section] || [])[currentRowIndex(descriptor.section, rowCursor)];
+  if (!entry) return "";
+  if (descriptor.section === "education") {
+    // Stored education dates are graduation years only, with no month.
+    if (descriptor.unit !== "year") return "";
+    return (descriptor.role === "start" ? entry.startYear : entry.endYear) || "";
+  }
+  if (entry.current && descriptor.role === "end") return ""; // still employed there
+  const iso = descriptor.role === "start" ? entry.startDate : entry.endDate;
+  if (!iso) return "";
+  const [year, month] = iso.split("-");
+  return descriptor.unit === "year" ? year : String(Number(month));
+}
+
 function findAddEntryButton(pattern) {
   const candidates = deepQueryAll('button, a, [role="button"], spl-button');
   return candidates.find((b) => pattern.test(b.getAttribute("aria-label") || "") || pattern.test(optionLabel(b)));
@@ -794,8 +848,9 @@ async function fillDocument(doc, profile) {
         continue;
       }
       const groupLabel = getRadioGroupLabel(doc, el);
-      const path = matchFieldPath(groupLabel);
-      if (!path) continue;
+      const matchedPath = matchFieldPath(groupLabel);
+      if (!matchedPath) continue;
+      const path = resolveRowPath(matchedPath, rowCursor);
       if ([...group].some((r) => r.checked)) {
         record(groupLabel, path, "skipped", "already answered");
         continue;
@@ -816,8 +871,13 @@ async function fillDocument(doc, profile) {
 
     if (type === "checkbox") {
       const label = getLabelText(doc, el);
-      const path = matchFieldPath(label);
-      if (!path) continue;
+      const matchedPath = matchFieldPath(label);
+      if (!matchedPath) continue;
+      // A repeated row's own checkbox ("I currently work here") needs the same
+      // row resolution as its other fields — without this, a second row's
+      // checkbox still resolves to experience.0.current, same class of bug as
+      // the earlier combobox one.
+      const path = resolveRowPath(matchedPath, rowCursor);
       const value = getPathValue(profile, path);
       // A checkbox may only be driven by a genuinely boolean profile field.
       // Without this, a text value ticks any box whose label happens to match:
@@ -841,6 +901,26 @@ async function fillDocument(doc, profile) {
     }
 
     const label = getLabelText(doc, el);
+
+    const dateSubfield = matchDateSubfield(el, label);
+    if (dateSubfield) {
+      const reportPath = `${dateSubfield.section}[row].${dateSubfield.role}Date.${dateSubfield.unit}`;
+      if (el.value) {
+        record(label, reportPath, "skipped", `already has a value ("${el.value}")`);
+        continue;
+      }
+      const value = resolveDateSubfieldValue(dateSubfield, profile, rowCursor);
+      if (!value) {
+        record(label, reportPath, "skipped", "no data in profile");
+        continue;
+      }
+      setNativeValue(el, String(value));
+      fireEvents(el);
+      filledCount++;
+      record(label, reportPath, "filled", value);
+      continue;
+    }
+
     const matchedPath = matchFieldPath(label);
     if (!matchedPath) continue;
     // Resolved before the skip checks below so the cursor still advances for

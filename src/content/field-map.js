@@ -52,7 +52,10 @@ const FIELD_RULES = [
   // stay for standalone fields that ask outside of a row.
   { re: /^company$|^employer$|^organization$/, path: "experience.0.company" },
   { re: /^title$|^position$|^role$|^job title$/, path: "experience.0.title" },
-  { re: /^description$|^summary$/, path: "experience.0.summary" },
+  { re: /^description$|^summary$|role description|job description/, path: "experience.0.summary" },
+  // Workday-style "I currently work here" — a row-scoped boolean, same as
+  // the company/title fields above.
+  { re: /currently work (here|there)|i (currently|still) work here/, path: "experience.0.current" },
   // The job's own location, not the candidate's — never answer it from the
   // profile's city, which would state where the applicant lives instead.
   { re: /office location|job location/, path: null },

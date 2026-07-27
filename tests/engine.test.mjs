@@ -27,6 +27,8 @@ function loadEngine() {
     "searchQueries",
     "yesNoText",
     "normText",
+    "matchDateSubfield",
+    "resolveDateSubfieldValue",
   ];
   const factory = new Function(`${source}\nreturn {${exposed.join(",")}};`);
   return factory();
@@ -134,6 +136,45 @@ for (let i = 0; i < nameRuns.length; i++) {
 check("small-caps heading joins into one name", joined, "HARSHITA DIDWANIA");
 check("repair leaves real initials alone", parser.repairSmallCapsHeading("J K Rowling"), "J K Rowling");
 check("repair fixes a split all-caps heading", parser.repairSmallCapsHeading("H ARSHITA D IDWANIA"), "HARSHITA DIDWANIA");
+
+// --- Workday-style date sub-fields ----------------------------------------
+// Both halves of a date range can share the identical label "Month"/"Year";
+// only the element's own id says which is which. Seen live on Workday.
+check("bare 'Description' widened to catch 'Role Description'", engine.matchFieldPath("Role Description"), "experience.0.summary");
+check("'I currently work here' is a row-scoped boolean", engine.matchFieldPath("I currently work here"), "experience.0.current");
+
+const startMonthEl = { id: "workExperience-5--startDate-dateSectionMonth-input", name: "" };
+const startYearEl = { id: "workExperience-5--startDate-dateSectionYear-input", name: "" };
+const endMonthEl = { id: "workExperience-5--endDate-dateSectionMonth-input", name: "" };
+check("start Month resolves against experience, not a guess",
+  engine.matchDateSubfield(startMonthEl, "Month"), { section: "experience", role: "start", unit: "month" });
+check("end Month is distinguished from start by id alone",
+  engine.matchDateSubfield(endMonthEl, "Month"), { section: "experience", role: "end", unit: "month" });
+check("a Month field with no start/end marker is left alone (e.g. a birthdate)",
+  engine.matchDateSubfield({ id: "birthMonth", name: "" }, "Month"), null);
+check("a field merely labelled 'Month' elsewhere is not touched", engine.matchDateSubfield({ id: "x", name: "" }, "Something else"), null);
+
+const workdayProfile = { experience: [{ startDate: "2024-07-01", endDate: "", current: true }] };
+check("start month reads the numeric month, not the zero-padded string",
+  engine.resolveDateSubfieldValue({ section: "experience", role: "start", unit: "month" }, workdayProfile, {}), "7");
+check("start year", engine.resolveDateSubfieldValue({ section: "experience", role: "start", unit: "year" }, workdayProfile, {}), "2024");
+check("a still-current job has no end date to give, and must not send an empty string as if it were real data",
+  engine.resolveDateSubfieldValue({ section: "experience", role: "end", unit: "month" }, workdayProfile, {}), "");
+
+const eduProfile = { education: [{ startYear: "", endYear: "2020" }] };
+check("education year comes from the stored graduation year", engine.resolveDateSubfieldValue({ section: "education", role: "end", unit: "year" }, eduProfile, {}), "2020");
+check("education has no month granularity at all, so a month sub-field gets nothing rather than a wrong guess",
+  engine.resolveDateSubfieldValue({ section: "education", role: "end", unit: "month" }, eduProfile, {}), "");
+
+// The date sub-field's row must track the SAME cursor as the row's own
+// company/title — otherwise a second row's dates could read the first row's
+// entry even though its own identifying fields advanced correctly.
+const sharedCursor = {};
+engine.resolveRowPath("experience.0.title", sharedCursor); // row 1 seen
+engine.resolveRowPath("experience.0.title", sharedCursor); // row 2 starts
+const rowTwoProfile = { experience: [{ startDate: "2020-01-01" }, { startDate: "2021-06-01" }] };
+check("a second row's date sub-field follows the same cursor as its own company/title",
+  engine.resolveDateSubfieldValue({ section: "experience", role: "start", unit: "year" }, rowTwoProfile, sharedCursor), "2021");
 
 console.log(failures ? `\n${failures} FAILED` : `\nall checks passed`);
 process.exit(failures ? 1 : 0);
