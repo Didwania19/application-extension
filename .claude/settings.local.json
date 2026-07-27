@@ -21,7 +21,22 @@
       "Bash(node --check src/content/field-map.js)",
       "Bash(node --check src/lib/storage.js)",
       "Bash(cd *)",
-      "Bash(node *)"
+      "Bash(node *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(gh auth *)",
+      "Bash(git config *)",
+      "Bash(gh pr create --base master --head application-extension --title 'Job application autofill extension' --body ' *)",
+      "Bash(git fetch *)",
+      "Bash(git rev-list *)",
+      "Bash(gh repo *)",
+      "Bash(git checkout *)",
+      "Bash(git merge *)",
+      "Bash(git stash *)",
+      "Bash(python3 -c \"import pypdf; print\\('pypdf already present', pypdf.__version__\\)\")",
+      "Bash(pip3 install *)",
+      "Bash(python3 -c \"import pypdf; print\\('pypdf ready', pypdf.__version__\\)\")"
     ]
   }
 }
