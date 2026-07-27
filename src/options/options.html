@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Job Application Autofill — Profile</title>
+  <link rel="stylesheet" href="options.css" />
+</head>
+<body>
+  <header class="page-header">
+    <h1>Your profile</h1>
+    <p class="subtitle">
+      Stored only on this device (<code>chrome.storage.local</code>). No accounts, no sync, no passwords.
+    </p>
+    <div id="save-status" class="save-status" aria-live="polite"></div>
+  </header>
+
+  <main>
+    <section class="card" id="section-identity">
+      <h2>Identity</h2>
+      <div class="grid">
+        <label>First name<input data-path="identity.firstName" autocomplete="off" /></label>
+        <label>Last name<input data-path="identity.lastName" autocomplete="off" /></label>
+        <label>Preferred name<input data-path="identity.preferredName" autocomplete="off" /></label>
+        <label>Pronouns<input data-path="identity.pronouns" autocomplete="off" /></label>
+        <label>Email<input type="email" data-path="identity.email" autocomplete="off" /></label>
+        <label>Phone<input type="tel" data-path="identity.phone" autocomplete="off" /></label>
+        <label>LinkedIn URL<input data-path="identity.linkedin" autocomplete="off" /></label>
+        <label>GitHub URL<input data-path="identity.github" autocomplete="off" /></label>
+        <label>Portfolio URL<input data-path="identity.portfolio" autocomplete="off" /></label>
+      </div>
+    </section>
+
+    <section class="card" id="section-location">
+      <h2>Location</h2>
+      <div class="grid">
+        <label>Address line 1<input data-path="location.addressLine1" autocomplete="off" /></label>
+        <label>City<input data-path="location.city" autocomplete="off" /></label>
+        <label>State / region<input data-path="location.state" autocomplete="off" /></label>
+        <label>Postal code<input data-path="location.postalCode" autocomplete="off" /></label>
+        <label>Country<input data-path="location.country" autocomplete="off" /></label>
+        <label class="checkbox">
+          <input type="checkbox" data-path="location.willingToRelocate" />
+          Willing to relocate
+        </label>
+      </div>
+    </section>
+
+    <section class="card" id="section-work">
+      <h2>Work</h2>
+      <div class="grid">
+        <label>Current title<input data-path="work.currentTitle" autocomplete="off" /></label>
+        <label>Current company<input data-path="work.currentCompany" autocomplete="off" /></label>
+        <label>Years of experience<input data-path="work.yearsExperience" autocomplete="off" /></label>
+        <label>Desired salary<input data-path="work.desiredSalary" autocomplete="off" /></label>
+        <label>Earliest start date<input type="date" data-path="work.earliestStartDate" autocomplete="off" /></label>
+        <label>Notice period<input data-path="work.noticePeriod" autocomplete="off" /></label>
+      </div>
+    </section>
+
+    <section class="card" id="section-authorization">
+      <h2>Work authorization</h2>
+      <p class="hint">
+        These two questions look similar but are opposite in meaning. The extension treats them
+        as separate high-confidence fields and never guesses on this category.
+      </p>
+      <div class="grid">
+        <label>
+          Are you legally authorized to work in your target country?
+          <select data-path="authorization.authorizedToWork">
+            <option value="">— not set —</option>
+            <option value="yes">Yes</option>
+            <option value="no">No</option>
+          </select>
+        </label>
+        <label>
+          Will you now require sponsorship for a visa?
+          <select data-path="authorization.requiresSponsorshipNow">
+            <option value="">— not set —</option>
+            <option value="yes">Yes</option>
+            <option value="no">No</option>
+          </select>
+        </label>
+        <label>
+          Will you in the future require sponsorship for a visa?
+          <select data-path="authorization.requiresSponsorshipFuture">
+            <option value="">— not set —</option>
+            <option value="yes">Yes</option>
+            <option value="no">No</option>
+          </select>
+        </label>
+        <label>
+          Country of citizenship
+          <input data-path="authorization.citizenshipCountry" autocomplete="off" />
+          <span class="hint">
+            Used for export-licensing questions, which ask for citizenship or permanent
+            residence — not where you live. If a form asks for "whichever was obtained
+            last", enter the one that applies to you.
+          </span>
+        </label>
+        <label>Visa status note (optional, freeform)<input data-path="authorization.visaStatusNote" autocomplete="off" /></label>
+      </div>
+    </section>
+
+    <section class="card" id="section-education">
+      <h2>Education</h2>
+      <div id="education-list" class="dynamic-list"></div>
+      <button type="button" class="btn-add" data-add="education">+ Add education</button>
+    </section>
+
+    <section class="card" id="section-experience">
+      <h2>Experience</h2>
+      <div id="experience-list" class="dynamic-list"></div>
+      <button type="button" class="btn-add" data-add="experience">+ Add experience</button>
+    </section>
+
+    <section class="card" id="section-documents">
+      <h2>Documents</h2>
+      <div class="grid">
+        <label>
+          Resume (PDF)
+          <input type="file" id="resume-file" accept=".pdf,application/pdf" />
+        </label>
+        <div class="file-status" id="resume-status">No resume uploaded.</div>
+        <label>
+          Cover letter (PDF)
+          <input type="file" id="cover-letter-file" accept=".pdf,application/pdf" />
+        </label>
+        <div class="file-status" id="cover-letter-status">No cover letter uploaded.</div>
+      </div>
+      <div class="storage-meter">
+        <div class="storage-bar"><div id="storage-bar-fill" class="storage-bar-fill"></div></div>
+        <span id="storage-usage-text">Storage: —</span>
+      </div>
+      <p id="storage-warning" class="warning hidden">
+        You're approaching the 10MB local storage limit. Consider a smaller resume/cover letter file.
+      </p>
+    </section>
+
+    <section class="card" id="section-eeo">
+      <h2>Equal employment opportunity (optional)</h2>
+      <p class="hint">All default to "Prefer not to say" and are never auto-selected on a page unless you set them here.</p>
+      <div class="grid">
+        <label>
+          Gender
+          <select data-path="eeo.gender">
+            <option>Prefer not to say</option>
+            <option>Male</option>
+            <option>Female</option>
+            <option>Non-binary</option>
+          </select>
+        </label>
+        <label>
+          Are you Hispanic/Latino?
+          <select data-path="eeo.hispanicLatino">
+            <option>Prefer not to say</option>
+            <option>Yes</option>
+            <option>No</option>
+          </select>
+        </label>
+        <label>
+          Race/ethnicity
+          <select data-path="eeo.race">
+            <option>Prefer not to say</option>
+            <option>American Indian or Alaska Native</option>
+            <option>Asian</option>
+            <option>Black or African American</option>
+            <option>Hispanic or Latino</option>
+            <option>Native Hawaiian or Other Pacific Islander</option>
+            <option>White</option>
+            <option>Two or more races</option>
+          </select>
+        </label>
+        <label>
+          Veteran status
+          <select data-path="eeo.veteranStatus">
+            <option>Prefer not to say</option>
+            <option>I am not a protected veteran</option>
+            <option>I identify as one or more of the classifications of a protected veteran</option>
+          </select>
+        </label>
+        <label>
+          Disability status
+          <select data-path="eeo.disabilityStatus">
+            <option>Prefer not to say</option>
+            <option>Yes, I have a disability</option>
+            <option>No, I do not have a disability</option>
+          </select>
+        </label>
+      </div>
+    </section>
+
+    <section class="card" id="section-answers">
+      <h2>Saved answers to recurring questions</h2>
+      <p class="hint">
+        Matched against free-text questions (e.g. "Why do you want to work here?") by a normalized
+        version of the question text. Never auto-generated — only what you've written before.
+      </p>
+      <div id="answers-list" class="dynamic-list"></div>
+      <button type="button" class="btn-add" data-add="answers">+ Add saved answer</button>
+    </section>
+
+    <section class="card" id="section-transfer">
+      <h2>Export / import</h2>
+      <div class="row">
+        <button type="button" id="export-btn">Export profile JSON</button>
+        <label class="file-btn">
+          Import profile JSON
+          <input type="file" id="import-file" accept="application/json" />
+        </label>
+      </div>
+    </section>
+  </main>
+
+  <template id="education-row-template">
+    <div class="dynamic-row" data-array="education">
+      <div class="grid">
+        <label>School<input data-field="school" /></label>
+        <label>Degree<input data-field="degree" /></label>
+        <label>Field of study<input data-field="field" /></label>
+        <label>Start year<input data-field="startYear" /></label>
+        <label>End year<input data-field="endYear" /></label>
+        <label>GPA<input data-field="gpa" /></label>
+      </div>
+      <button type="button" class="btn-remove" data-remove>Remove</button>
+    </div>
+  </template>
+
+  <template id="experience-row-template">
+    <div class="dynamic-row" data-array="experience">
+      <div class="grid">
+        <label>Company<input data-field="company" /></label>
+        <label>Title<input data-field="title" /></label>
+        <label>Start date<input type="date" data-field="startDate" /></label>
+        <label>End date<input type="date" data-field="endDate" /></label>
+        <label class="checkbox"><input type="checkbox" data-field="current" /> Current role</label>
+      </div>
+      <label class="full-width">Summary<textarea data-field="summary" rows="3"></textarea></label>
+      <button type="button" class="btn-remove" data-remove>Remove</button>
+    </div>
+  </template>
+
+  <template id="answers-row-template">
+    <div class="dynamic-row" data-array="answers">
+      <label>Question pattern (a phrase that identifies this question)<input data-field="pattern" /></label>
+      <label class="full-width">Your answer<textarea data-field="response" rows="4"></textarea></label>
+      <button type="button" class="btn-remove" data-remove>Remove</button>
+    </div>
+  </template>
+
+  <script type="module" src="options.js"></script>
+</body>
+</html>
