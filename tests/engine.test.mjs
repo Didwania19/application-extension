@@ -239,5 +239,50 @@ const rowTwoProfile = { experience: [{ startDate: "2020-01-01" }, { startDate: "
 check("a second row's date sub-field follows the same cursor as its own company/title",
   engine.resolveDateSubfieldValue({ section: "experience", role: "start", unit: "year" }, rowTwoProfile, sharedCursor), "2021");
 
+// --- gaps found sweeping real postings (Anthropic, Standard Bank, Mattel,
+// Figma, Discord, BambooHR, Webflow) -----------------------------------------
+check("bare 'Name' maps to the full name", engine.matchFieldPath("Name"), "identity.fullName");
+check("'School Name' is untouched by the bare Name rule", engine.matchFieldPath("School Name"), "education.0.school");
+check("'Company Name' is untouched by the bare Name rule", engine.matchFieldPath("Company Name"), "work.currentCompany");
+check("bare 'Website' maps to the portfolio URL", engine.matchFieldPath("Website"), "identity.portfolio");
+check("'Other Website' also maps to the portfolio URL", engine.matchFieldPath("Other Website"), "identity.portfolio");
+check("'What country are you based in?' routes to residence country",
+  engine.matchFieldPath("What country are you based in?"), "location.country");
+check("'From where do you intend to work?' routes to residence country",
+  engine.matchFieldPath("From where do you intend to work?"), "location.country");
+check("'What region do you reside in?' routes to residence country",
+  engine.matchFieldPath("What region do you reside in?"), "location.country");
+check("citizenship question still stays distinct from these residence paraphrases",
+  engine.matchFieldPath("For the sole purpose of determining export licensing requirements, please provide your country of citizenship"),
+  "authorization.citizenshipCountry");
+check("'now or in the future' phrasing still routes to sponsorship-future",
+  engine.matchFieldPath("Will you now or in the future require BambooHR to file a petition for you in order to obtain or maintain your ability to work in the US?"),
+  "authorization.requiresSponsorshipFuture");
+check("the original 'will you in the future' phrasing still matches",
+  engine.matchFieldPath("Will you in the future require sponsorship for employment visa status?"),
+  "authorization.requiresSponsorshipFuture");
+check("'legal authorization to work' paraphrase routes to work authorization",
+  engine.matchFieldPath("Do you currently have legal authorization to work in the country in which this job is located?"),
+  "authorization.authorizedToWork");
+check("the original 'authorized to work' phrasing still matches",
+  engine.matchFieldPath("Are you authorized to work in the United States?"),
+  "authorization.authorizedToWork");
+check("'How do you pronounce your name?' is not caught by the pronoun rule or the name rule",
+  engine.matchFieldPath("How do you pronounce your name? (e.g., 'An-na' or 'Ah-na')"), null);
+check("a real pronouns question still matches", engine.matchFieldPath("Pronouns"), "identity.pronouns");
+
+// --- gaps found sweeping a second round of real postings (Duolingo, Reddit,
+// Shield AI, Blue Origin/Workday) -----------------------------------------
+check("'Country Phone Code' is recognized but not autofilled with the phone number",
+  engine.matchFieldPath("Country Phone Code"), null);
+check("plain 'Country Code' still matches the same guard", engine.matchFieldPath("Country Code"), null);
+check("'Phone Device Type' is recognized but not autofilled with the phone number",
+  engine.matchFieldPath("Phone Device Type"), null);
+check("the phone number field itself still matches", engine.matchFieldPath("Phone Number"), "identity.phone");
+check("SMS/WhatsApp consent question is not caught by the loose email rule",
+  engine.matchFieldPath("Would you like to receive communications via SMS and/or WhatsApp to the number provided about your application process? If you select no, we will only communicate with you via email and/or telephone calls."),
+  null);
+check("a real email field still matches", engine.matchFieldPath("Email Address"), "identity.email");
+
 console.log(failures ? `\n${failures} FAILED` : `\nall checks passed`);
 process.exit(failures ? 1 : 0);
