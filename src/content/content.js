@@ -10,11 +10,11 @@
 
     const frameLabel = window.top === window ? "top frame" : `iframe (${location.hostname})`;
     if (report.length) {
-      console.groupCollapsed(`Job Application Autofill — ${frameLabel}: ${filledCount} filled, ${report.length} fields recognized`);
+      console.groupCollapsed(`Fieldwork — ${frameLabel}: ${filledCount} filled, ${report.length} fields recognized`);
       console.table(report);
       console.groupEnd();
     } else {
-      console.log(`Job Application Autofill — ${frameLabel}: recognized no fields on this page`);
+      console.log(`Fieldwork — ${frameLabel}: recognized no fields on this page`);
     }
 
     if (window.top === window) {
@@ -22,7 +22,7 @@
       showAutofillToast(filledCount, failed);
     }
   } catch (err) {
-    console.error("Job Application Autofill: fill failed", err);
+    console.error("Fieldwork: fill failed", err);
   }
 })();
 
@@ -36,8 +36,8 @@ function showAutofillToast(count, failed) {
   const summary = document.createElement("div");
   summary.textContent =
     count > 0
-      ? `Job Application Autofill: filled ${count} field${count === 1 ? "" : "s"} — review before submitting.`
-      : "Job Application Autofill: found nothing to fill on this page.";
+      ? `Fieldwork: filled ${count} field${count === 1 ? "" : "s"} — review before submitting.`
+      : "Fieldwork: found nothing to fill on this page.";
   el.appendChild(summary);
 
   if (failed.length) {

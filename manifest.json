@@ -1,40 +1,33 @@
 {
   "manifest_version": 3,
-  "name": "Job Application Autofill",
+  "name": "Fieldwork — autofill for job applications",
   "version": "0.1.0",
   "description": "Fills job application forms from your saved profile. Never submits — you review and submit every application yourself.",
   "permissions": ["storage", "activeTab", "scripting"],
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
   "action": {
-    "default_title": "Fill this job application"
+    "default_title": "Fill this job application",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
   },
   "background": {
     "service_worker": "src/background.js"
   },
   "host_permissions": [
-    "https://boards.greenhouse.io/*",
-    "https://job-boards.greenhouse.io/*",
-    "https://jobs.lever.co/*",
-    "https://jobs.ashbyhq.com/*",
-    "https://apply.workable.com/*",
-    "https://jobs.smartrecruiters.com/*",
-    "https://*.icims.com/*",
-    "https://*.myworkdayjobs.com/*",
-    "https://*.comeet.co/*",
-    "https://*.comeet.com/*",
-    "https://*.oraclecloud.com/*",
     "https://*.greenhouse.io/*",
     "https://*.lever.co/*",
     "https://*.ashbyhq.com/*",
-    "https://*.workable.com/*",
     "https://*.smartrecruiters.com/*",
-    "https://*.bamboohr.com/*",
-    "https://*.jazz.co/*",
-    "https://*.jobvite.com/*",
-    "https://*.breezy.hr/*",
-    "https://*.teamtailor.com/*",
-    "https://*.pinpointhq.com/*",
-    "https://*.rippling.com/*",
-    "https://*.dover.com/*"
+    "https://*.myworkdayjobs.com/*",
+    "https://*.icims.com/*",
+    "https://*.workable.com/*"
   ],
   "options_ui": {
     "page": "src/options/options.html",
