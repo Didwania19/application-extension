@@ -38,6 +38,14 @@ function loadEngine() {
   return factory();
 }
 
+// background.js registers a chrome.action listener at the top level, which does
+// not exist here, so only the pure URL-classification helpers are pulled out.
+function loadBackground() {
+  const source = read("src/background.js").replace(/^chrome\.action\.onClicked[\s\S]*$/m, "");
+  const factory = new Function(`${source}\nreturn { isRestrictedUrl, isRestrictedPageError };`);
+  return factory();
+}
+
 // resumeParser is an ES module that imports pdf.js, which needs a browser.
 // Strip the module-level browser wiring and keep the parsing logic.
 function loadResumeParser() {
@@ -61,6 +69,7 @@ function check(name, actual, expected) {
 }
 
 const engine = loadEngine();
+const background = loadBackground();
 const parser = loadResumeParser();
 
 // --- label routing -------------------------------------------------------
@@ -283,6 +292,34 @@ check("SMS/WhatsApp consent question is not caught by the loose email rule",
   engine.matchFieldPath("Would you like to receive communications via SMS and/or WhatsApp to the number provided about your application process? If you select no, we will only communicate with you via email and/or telephone calls."),
   null);
 check("a real email field still matches", engine.matchFieldPath("Email Address"), "identity.email");
+
+
+// --- restricted pages -----------------------------------------------------
+// The toolbar icon is visible on every page, so clicking it on a chrome:// tab
+// is an ordinary thing to do. Chrome refuses the injection with "Cannot access
+// a chrome:// URL", which was landing in chrome://extensions under Errors and
+// reading as a fault in the extension rather than an unsupported page.
+check("a chrome:// page is recognised as restricted", background.isRestrictedUrl("chrome://extensions"), true);
+check("the new tab page is restricted", background.isRestrictedUrl("chrome://newtab/"), true);
+check("another extension's page is restricted", background.isRestrictedUrl("chrome-extension://abc/options.html"), true);
+check("devtools is restricted", background.isRestrictedUrl("devtools://devtools/bundled/inspector.html"), true);
+check("view-source is restricted", background.isRestrictedUrl("view-source:https://example.com"), true);
+check("the Chrome Web Store is restricted despite being https", background.isRestrictedUrl("https://chromewebstore.google.com/search/autofill"), true);
+check("the legacy Web Store host is restricted", background.isRestrictedUrl("https://chrome.google.com/webstore/category/extensions"), true);
+check("a real job posting is not restricted", background.isRestrictedUrl("https://job-boards.greenhouse.io/anthropic/jobs/4020350008"), false);
+check("a non-webstore path on chrome.google.com is not restricted", background.isRestrictedUrl("https://chrome.google.com/"), false);
+// tab.url is only populated when the extension has access to the tab, which a
+// restricted page withholds — so an unknown URL must fall through to the
+// injection attempt rather than being pre-emptively refused.
+check("an unknown URL is not pre-emptively treated as restricted", background.isRestrictedUrl(undefined), false);
+check("a malformed URL is not treated as restricted", background.isRestrictedUrl("not a url"), false);
+
+check("Chrome's chrome:// refusal is classified as a restricted page, not a fault",
+  background.isRestrictedPageError(new Error("Cannot access a chrome:// URL")), true);
+check("the Web Store refusal is classified the same way",
+  background.isRestrictedPageError(new Error("Cannot access contents of the page. Extension manifest must request permission to access the extension gallery.")), true);
+check("a genuine failure is still reported as a fault",
+  background.isRestrictedPageError(new Error("Frame with ID 0 was removed")), false);
 
 console.log(failures ? `\n${failures} FAILED` : `\nall checks passed`);
 process.exit(failures ? 1 : 0);

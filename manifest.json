@@ -1,9 +1,13 @@
 {
   "manifest_version": 3,
   "name": "Fieldwork — autofill for job applications",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Fills job application forms from your saved profile. Never submits — you review and submit every application yourself.",
-  "permissions": ["storage", "activeTab", "scripting"],
+  "permissions": [
+    "storage",
+    "activeTab",
+    "scripting"
+  ],
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",

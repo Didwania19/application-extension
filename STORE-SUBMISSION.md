@@ -66,12 +66,18 @@ Then the three certifications, all of which are true here:
 
 ## Privacy policy URL
 
-`PRIVACY.md` needs to be reachable at a public URL. Simplest option: enable
-GitHub Pages on the repository, or link the file on GitHub directly.
+The repository is public, so the policy is already reachable:
 
-**Before publishing:** replace the contact-email placeholder in `PRIVACY.md`.
-Note that whatever address goes there becomes public — a forwarding alias may be
-preferable to a personal inbox.
+```
+https://github.com/Didwania19/application-extension/blob/master/PRIVACY.md
+```
+
+Chrome accepts a GitHub URL. Enabling GitHub Pages would give a tidier address
+but is not required.
+
+The contact address in the policy is `didwaniaharshita19@gmail.com`. It is
+public by virtue of being in a public policy on a public repo — swap it for a
+forwarding alias if that becomes a nuisance.
 
 ## Why the host list is 7 entries and not 24
 
