@@ -21,30 +21,13 @@
     "service_worker": "src/background.js"
   },
   "host_permissions": [
-    "https://boards.greenhouse.io/*",
-    "https://job-boards.greenhouse.io/*",
-    "https://jobs.lever.co/*",
-    "https://jobs.ashbyhq.com/*",
-    "https://apply.workable.com/*",
-    "https://jobs.smartrecruiters.com/*",
-    "https://*.icims.com/*",
-    "https://*.myworkdayjobs.com/*",
-    "https://*.comeet.co/*",
-    "https://*.comeet.com/*",
-    "https://*.oraclecloud.com/*",
     "https://*.greenhouse.io/*",
     "https://*.lever.co/*",
     "https://*.ashbyhq.com/*",
-    "https://*.workable.com/*",
     "https://*.smartrecruiters.com/*",
-    "https://*.bamboohr.com/*",
-    "https://*.jazz.co/*",
-    "https://*.jobvite.com/*",
-    "https://*.breezy.hr/*",
-    "https://*.teamtailor.com/*",
-    "https://*.pinpointhq.com/*",
-    "https://*.rippling.com/*",
-    "https://*.dover.com/*"
+    "https://*.myworkdayjobs.com/*",
+    "https://*.icims.com/*",
+    "https://*.workable.com/*"
   ],
   "options_ui": {
     "page": "src/options/options.html",

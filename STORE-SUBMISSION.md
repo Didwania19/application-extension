@@ -30,8 +30,11 @@ data used for filling.
 
 **Host permissions**
 > Recognises and fills application forms on the applicant-tracking systems that
-> host them (Greenhouse, Lever, Ashby, Workday, SmartRecruiters and similar).
-> Each listed domain is an ATS that serves job application forms.
+> host them: Greenhouse, Lever, Ashby, SmartRecruiters, Workday, iCIMS and
+> Workable. Each of the seven listed domains is an ATS that serves job
+> application forms. `activeTab` alone is not sufficient, because these systems
+> are frequently embedded as a cross-origin frame inside a company's own careers
+> page, which `activeTab` does not reach.
 
 **Remote code**
 > None. All code is included in the package. The bundled PDF.js library is used
@@ -70,19 +73,33 @@ GitHub Pages on the repository, or link the file on GitHub directly.
 Note that whatever address goes there becomes public — a forwarding alias may be
 preferable to a personal inbox.
 
-## Worth reconsidering before submitting
+## Why the host list is 7 entries and not 24
 
-The manifest declares 20+ `host_permissions`. Because the extension only acts
-when the toolbar icon is clicked, `activeTab` alone may already grant everything
-`chrome.scripting.executeScript` needs at that moment — in which case the host
-list could be dropped entirely.
+The original manifest declared 24 host patterns, which produces an install
+prompt reading "read and change your data on 24 sites" — the single biggest
+deterrent at the moment someone decides whether to install.
 
-That would be worth testing, for three reasons: a shorter permission list means
-a faster and less sceptical review; the install prompt stops saying "read and
-change your data on 20+ sites", which is the single biggest deterrent at the
-install decision; and it makes the privacy claim structurally stronger rather
-than merely accurate.
+**Could `activeTab` replace them entirely?** No. `activeTab` grants access to
+the top-level frame's origin only; it does not extend to cross-origin frames.
+Greenhouse [documents an iframe embed](https://support.greenhouse.io/hc/en-us/articles/46365908766875)
+in which the job board and application form load from `boards.greenhouse.io`
+*inside* a company's own careers page — a cross-origin frame that `activeTab`
+cannot reach. Dropping host permissions would silently break every employer
+using that supported embed, and silent breakage is the worst failure mode for a
+tool people rely on while applying for work.
 
-It needs real testing first — particularly on Workday and on same-origin iframes,
-where `allFrames` injection is involved — because if `activeTab` turns out to be
-insufficient the failure mode is silent.
+Checked directly on a live Greenhouse posting: all 37 form fields sit in the top
+frame, and the only cross-origin frames are reCAPTCHA and googleapis, neither of
+which contains form fields. So the top-level case is fine either way — it is the
+embedded case that requires the host list.
+
+**What was removed.** Eleven domains that had never been tested against a live
+posting: Comeet, Oracle Cloud, BambooHR, JazzHR, Jobvite, Breezy, Teamtailor,
+Pinpoint, Rippling and Dover. Claiming support for a platform nobody has run the
+extension against is a worse outcome than not listing it — it produces a scarier
+permission prompt in exchange for coverage that may not work.
+
+The seven that remain are consolidated to wildcards (`https://*.greenhouse.io/*`
+covers both `boards.` and `job-boards.`), and each is an ATS that has either
+been verified live or, for iCIMS and Workable, has explicit handling in the
+fill engine.

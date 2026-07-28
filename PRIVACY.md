@@ -107,8 +107,7 @@ the release notes rather than buried here.
 
 ## Contact
 
-Questions about this policy or the extension: **[ADD A CONTACT EMAIL BEFORE
-PUBLISHING]**
+Questions about this policy or the extension: **didwaniaharshita19@gmail.com**
 
 ---
 
