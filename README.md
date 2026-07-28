@@ -42,6 +42,7 @@ for what was actually tested where.
 ```
 node tests/engine.test.mjs      # label-matching and row-cursor regression tests
 python3 icons/make_icons.py     # regenerate the PNG icons
+./package.sh                    # build the Chrome Web Store zip
 ```
 
 The tests load `src/content/*.js` directly rather than a copy, because a
@@ -56,3 +57,8 @@ transcribed copy once hid a real bug for hours.
 | `src/content/content.js` | Entry point; runs the fill and reports the result. |
 | `src/options/` | Profile editor. |
 | `src/lib/resumeParser.js` | Pulls a profile out of an uploaded resume PDF. |
+
+## License
+
+MIT — see [LICENSE](LICENSE). Bundles [PDF.js](https://github.com/mozilla/pdf.js)
+(Apache 2.0) for reading uploaded résumés.

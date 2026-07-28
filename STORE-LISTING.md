@@ -140,9 +140,14 @@ public.
 
 ## Before submitting
 
-- [ ] Privacy policy reachable at a public URL (`PRIVACY.md` via GitHub Pages)
-- [ ] Screenshots taken with personal details redacted
-- [ ] Bump `version` in `manifest.json` from `0.1.0` to `1.0.0`
-- [ ] Zip the folder excluding `.git`, `tests/`, `icons/make_icons.py`, and the
-      `*.md` working notes
-- [ ] Confirm the store name matches `manifest.json` exactly
+- [x] Privacy policy reachable at a public URL —
+      https://github.com/Didwania19/application-extension/blob/master/PRIVACY.md
+- [x] `version` bumped to `1.0.0`
+- [x] Package built — `npm run package`, or `bash package.sh`, produces
+      `fieldwork-1.0.0.zip` (564 KB) containing only `manifest.json`, `src/`
+      and the three PNGs
+- [x] Store name matches `manifest.json` exactly
+- [ ] **Screenshots** — needs the extension loaded unpacked; redact personal
+      details before uploading
+- [ ] **Register a Chrome Web Store developer account** — one-off $5 fee
+- [ ] Upload the zip, paste the copy above, submit for review
