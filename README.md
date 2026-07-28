@@ -16,6 +16,9 @@ It also declines to guess. Where a field is ambiguous ("Phone Device Type",
 leaves the field alone rather than typing something plausible into a real
 application, and it tells you what it skipped.
 
+Full details in [PRIVACY.md](PRIVACY.md). The short version: no account, no
+server, no analytics, and nothing transmitted anywhere.
+
 ## Install
 
 Not yet on the Chrome Web Store. To run it locally:
