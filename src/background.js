@@ -6,6 +6,6 @@ chrome.action.onClicked.addListener(async (tab) => {
       files: ["src/content/field-map.js", "src/content/fill-engine.js", "src/content/content.js"],
     });
   } catch (err) {
-    console.error("Job Application Autofill: injection failed", err);
+    console.error("Fieldwork: injection failed", err);
   }
 });
