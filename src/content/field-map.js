@@ -2,13 +2,39 @@
 // `path` is a dotted path into the stored profile (see lib/storage.js), or
 // `null` to mean "recognized, but intentionally not autofilled".
 const FIELD_RULES = [
-  { re: /country code/, path: null },
+  // Broadened from the literal "country code": Workday splits this into
+  // "Country Phone Code", which the tighter phrase missed — it then fell
+  // through to the phone rule below and got the raw phone NUMBER typed into
+  // a dial-code field.
+  { re: /country.*code/, path: null },
+  // A phone-number-shaped dropdown ("Mobile"/"Home"/"Work"), not the number
+  // itself — the loose /phone/ rule below matched it and typed the stored
+  // phone number into a field that expects a device-type selection.
+  { re: /device type/, path: null },
+  // Guard before both the pronouns rule and the name rules below: "How do you
+  // pronounce your name?" asks for a phonetic guide, not the stored pronouns
+  // or another copy of the name, and contains substrings that match each.
+  { re: /pronounce/, path: null },
   { re: /prefer(red)?\s*first\s*name|^preferred name$/, path: "identity.preferredName" },
   { re: /prefer(red)?\s*last\s*name/, path: null },
-  { re: /pronoun/, path: "identity.pronouns" },
+  // Word-bounded: a loose /pronoun/ also matches inside "pronounce", so "How
+  // do you pronounce your name?" (a phonetic-guide question, not a pronouns
+  // question) got the stored pronouns typed into it.
+  { re: /\bpronouns?\b/, path: "identity.pronouns" },
   { re: /first name/, path: "identity.firstName" },
   { re: /last name|surname|family name/, path: "identity.lastName" },
-  { re: /full name|your name|applicant name/, path: "identity.fullName" },
+  // A bare "Name" (no "full"/"your"/"applicant" qualifier) is common enough on
+  // its own to warrant a dedicated case. Anchored to the whole label so it
+  // never swallows a qualified field like "Company Name" or "School Name" —
+  // those normalize to "company name"/"school name", not "name".
+  { re: /full name|your name|applicant name|^name$/, path: "identity.fullName" },
+  // Guard before the email rule: some ATS forms render a long consent
+  // question ("Would you like to receive communications via SMS and/or
+  // WhatsApp...if you select no, we will only communicate via email...") as
+  // a plain text input. That prose mentions "email" in passing, so the loose
+  // /e-?mail/ rule below matched it and typed the stored email address into
+  // an SMS/WhatsApp opt-in question.
+  { re: /receive.*(sms|text messages?|whatsapp)/, path: null },
   { re: /e-?mail/, path: "identity.email" },
   { re: /phone|mobile|cell/, path: "identity.phone" },
   { re: /linkedin/, path: "identity.linkedin" },
@@ -16,7 +42,10 @@ const FIELD_RULES = [
   // Guard before the portfolio rule: a "Portfolio Password" is a credential,
   // not a link, and must never receive the portfolio URL.
   { re: /password|passcode/, path: null },
-  { re: /portfolio|personal website/, path: "identity.portfolio" },
+  // A bare "Website"/"Other Website" (no "portfolio"/"personal" qualifier) is
+  // just as common across ATS forms — anchored so it doesn't swallow an
+  // unrelated qualified field (a company website question, say).
+  { re: /portfolio|personal website|^website$|^other website$/, path: "identity.portfolio" },
   { re: /street address|address line ?1|^address$/, path: "location.addressLine1" },
   { re: /\bcity\b/, path: "location.city" },
   { re: /\bstate\b|province/, path: "location.state" },
@@ -29,7 +58,11 @@ const FIELD_RULES = [
   // "…provide your country of citizenship…" and answered it with the
   // residence country, so this only matches fields actually labelled as the
   // country you live in.
-  { re: /^country$|^country\/region$|^country or region$|country of residence|mailing country/, path: "location.country" },
+  // Also catches the common paraphrases ATS forms use for the same question —
+  // "What country are you based in?", "From where do you intend to work?",
+  // "What region do you reside in?" — none of which contain the literal
+  // "country of residence"/"mailing country" the narrower patterns above rely on.
+  { re: /^country$|^country\/region$|^country or region$|country of residence|mailing country|country.*are you based|where.*you intend to work|region.*you reside|country.*do you reside/, path: "location.country" },
   { re: /relocat/, path: "location.willingToRelocate" },
   { re: /current (job )?title|job title\b/, path: "work.currentTitle" },
   { re: /current (employer|company)|company name/, path: "work.currentCompany" },
@@ -61,9 +94,15 @@ const FIELD_RULES = [
   { re: /office location|job location/, path: null },
   { re: /^start date$|available to start|earliest.*start|when can you start/, path: "work.earliestStartDate" },
   { re: /notice period/, path: "work.noticePeriod" },
-  { re: /sponsorship.*future|future.*sponsorship|will you in the future/, path: "authorization.requiresSponsorshipFuture" },
+  // "will you in the future" alone missed the common "will you now or in the
+  // future require [Company] to file a petition…" phrasing — that "now or"
+  // in the middle broke the literal match even though it's the identical
+  // question.
+  { re: /sponsorship.*future|future.*sponsorship|will you (now or )?in the future/, path: "authorization.requiresSponsorshipFuture" },
   { re: /sponsorship/, path: "authorization.requiresSponsorshipNow" },
-  { re: /authorized to work|legally (authorized|eligible)/, path: "authorization.authorizedToWork" },
+  // "legal authorization to work" is a paraphrase of "authorized to work" /
+  // "legally authorized" that forms use just as often and matched neither.
+  { re: /authorized to work|legally (authorized|eligible)|legal authorization to work/, path: "authorization.authorizedToWork" },
   { re: /^gender$|gender identity/, path: "eeo.gender" },
   // Must precede the race rule: forms word this as "Hispanic/Latino?" on its
   // own, but also as "Ethnicity: are you Hispanic or Latino?", which would
